@@ -8,7 +8,7 @@ from typing import Callable, Dict
 from skfuzzy import control as ctrl
 from sklearn.model_selection import train_test_split
 
-from .fuzzy_rules import extract_rules, define_input_variables, define_output_variables
+from fuzzy_rules import extract_rules, define_input_variables, define_output_variables
 
 
 
