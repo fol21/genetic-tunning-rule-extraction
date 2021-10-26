@@ -54,4 +54,4 @@ requires = [
     "wrapt==1.12.1",
     "zipp==3.6.0"
 ]
-build-backend = "setuptools.build_meta
+build-backend = "setuptools.build_meta"
