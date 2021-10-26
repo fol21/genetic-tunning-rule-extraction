@@ -57,8 +57,8 @@ def config_set_variable(var, ns, min_val, max_val, shoulder, set_points=None):
       if( set_points != None and _validate_points(set_points, ns)):
         c = set_points
         var['s_1'] = fuzz.trapmf(var.universe, c['left_shoulder'])
-        for s in c['triangles']:
-          var['s_{}'.format(s)] = fuzz.trimf(var.universe, s)
+        for i, s in enumerate(c['triangles']):
+          var['s_{}'.format(i + 1)] = fuzz.trimf(var.universe, s)
         var['s_{}'.format(ns)] = fuzz.trapmf(var.universe, c['right_shoulder'])
       else:
         c = np.linspace(min_val, max_val, ns+2)
@@ -71,8 +71,8 @@ def config_set_variable(var, ns, min_val, max_val, shoulder, set_points=None):
   else:
       if( set_points != None and _validate_points(set_points, ns)):
         c = set_points
-        for s in c['triangles']:
-          var['s_{}'.format(s)] = fuzz.trimf(var.universe, s)
+        for i, s in enumerate(c['triangles']):
+          var['s_{}'.format(i + 1)] = fuzz.trimf(var.universe, s)
       else:
         c = np.linspace(min_val, max_val, ns)
         d = ( max_val - min_val ) / (ns - 1)
