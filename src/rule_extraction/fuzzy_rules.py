@@ -16,54 +16,92 @@ def read_dataset(file_path):
         series = [preprocessing(line) for line in file]
     return np.array(series)
 
-def config_input_variable(name, ns, min_val, max_val, resolution, shoulder):
+def config_input_variable(name, ns, min_val, max_val, resolution, shoulder, set_points=None):
   universe = np.linspace(min_val, max_val, resolution)
   var = ctrl.Antecedent(universe, name)
-  var = config_set_variable(var, ns, min_val, max_val, shoulder)
+  var = config_set_variable(var, ns, min_val, max_val, shoulder, set_points)
   return var
 
-def config_output_variable(name, ns, min_val, max_val, resolution, shoulder, defuzzify_method):
+def config_output_variable(name, ns, min_val, max_val, resolution, shoulder, defuzzify_method, set_points=None):
   universe = np.linspace(min_val, max_val, resolution)
   var = ctrl.Consequent(universe, name, defuzzify_method=defuzzify_method)
-  var = config_set_variable(var, ns, min_val, max_val, shoulder)
+  var = config_set_variable(var, ns, min_val, max_val, shoulder, set_points)
   return var
 
-def config_set_variable(var, ns, min_val, max_val, shoulder):
+def config_set_points(ns, min_val, max_val, shoulder):
+  points = {}
   if shoulder:
       c = np.linspace(min_val, max_val, ns+2)
       d = ( max_val - min_val ) / (ns + 1)
-      var['s_1'] = fuzz.trapmf(var.universe, [c[0]-d, c[0] , c[0]+d, c[0]+2*d])
+
+      ## First Shoulder
+      points['s_1'] = [c[0]-d, c[0] , c[0]+d, c[0]+2*d]
+      # Triangles
       for s in range(2,ns):
-        var['s_{}'.format(s)] = fuzz.trimf(var.universe, [c[s-1], c[s], c[s+1]])
-      var['s_{}'.format(ns)] = fuzz.trapmf(var.universe, [c[ns]-d , c[ns], c[ns]+d, c[ns] + 2*d])
-      return var
+        points['s_{}'.format(s)] = [c[s-1], c[s], c[s+1]]
+
+      # Right Shoulder
+      points['s_{}'.format(ns)] = [c[ns]-d , c[ns], c[ns]+d, c[ns] + 2*d]
+      return points
   else:
       c = np.linspace(min_val, max_val, ns)
       d = ( max_val - min_val ) / (ns - 1)
       for s in range(1,ns+1):
-        var['s_{}'.format(s)] = fuzz.trimf(var.universe, [c[s-1] -d, c[s-1], c[s-1] + d])
+        points['s_{}'.format(s)] = [c[s-1] -d, c[s-1], c[s-1] + d]
+      return points
+
+
+def config_set_variable(var, ns, min_val, max_val, shoulder, set_points=None):
+  c = None
+  if shoulder:
+      if( set_points != None and _validate_points(set_points, ns)):
+        c = set_points
+        var['s_1'] = fuzz.trapmf(var.universe, c['left_shoulder'])
+        for s in c['triangles']:
+          var['s_{}'.format(s)] = fuzz.trimf(var.universe, s)
+        var['s_{}'.format(ns)] = fuzz.trapmf(var.universe, c['right_shoulder'])
+      else:
+        c = np.linspace(min_val, max_val, ns+2)
+        d = ( max_val - min_val ) / (ns + 1)
+        var['s_1'] = fuzz.trapmf(var.universe, [c[0]-d, c[0] , c[0]+d, c[0]+2*d])
+        for s in range(2,ns):
+          var['s_{}'.format(s)] = fuzz.trimf(var.universe, [c[s-1], c[s], c[s+1]])
+        var['s_{}'.format(ns)] = fuzz.trapmf(var.universe, [c[ns]-d , c[ns], c[ns]+d, c[ns] + 2*d])
+      return var
+  else:
+      if( set_points != None and _validate_points(set_points, ns)):
+        c = set_points
+        for s in c['triangles']:
+          var['s_{}'.format(s)] = fuzz.trimf(var.universe, s)
+      else:
+        c = np.linspace(min_val, max_val, ns)
+        d = ( max_val - min_val ) / (ns - 1)
+        for s in range(1,ns+1):
+          var['s_{}'.format(s)] = fuzz.trimf(var.universe, [c[s-1] -d, c[s-1], c[s-1] + d])
       return var
 
-def define_input_variables(config, shoulder):
+def define_input_variables(config, shoulder, set_points=None):
   epsilon = config['epsilon']
   input_variables  = [config_input_variable('I_{}'.format(i+1), 
   config['nb_sets'][0][i], 
   config['min'][0][i]-epsilon, 
-  config['max'][0][i]+epsilon, 
+  config['max'][0][i]+epsilon,
   config['resolution'], 
-  shoulder=shoulder) \
+  shoulder,
+  set_points) \
                     for i in range(config['nb_inputs'])]
   return input_variables
 
-def define_output_variables(config, shoulder, defuzzify_method):
+def define_output_variables(config, shoulder, defuzzify_method, set_points=None):
   epsilon = config['epsilon']
   output_variables = [config_output_variable('O_{}'.format(i+1), 
   config['nb_sets'][1][i], 
   config['min'][1][i]-epsilon, 
   config['max'][1][i]+epsilon, 
   config['resolution'], 
-  shoulder=shoulder, 
-  defuzzify_method=defuzzify_method) \
+  shoulder, 
+  defuzzify_method,
+  set_points) \
                     for i in range(config['nb_outputs'])]
   return output_variables
 
@@ -134,3 +172,33 @@ def rules_dataframe(rules_view):
       df=df.append(rule_dict, ignore_index=True)
       df = df[order_columns]
   return df
+
+def _validate_points(set_points, nb_sets):
+  """
+    Parameters
+    ----------
+
+      set_points: {
+        left_shoulder: list[abcd]
+        right_shoulder: list[abcd]
+        triangles: list[][abc]
+      }
+  """
+  valid = True
+  if(set_points['left_shoulder'] == None or set_points['right_shoulder'] == None):
+    valid = len(set_points['triangles']) == nb_sets
+    for s in set_points['triangles']:
+      valid = s[0] <= s[1] and s[1] <= s[2] 
+  else:
+    valid = \
+      set_points['left_shoulder'][0] <= set_points['left_shoulder'][1] and \
+      set_points['left_shoulder'][1] <= set_points['left_shoulder'][2] and \
+      set_points['left_shoulder'][2] <= set_points['left_shoulder'][3] and \
+      set_points['right_shoulder'][0] <= set_points['right_shoulder'][1] and \
+      set_points['right_shoulder'][1] <= set_points['right_shoulder'][2] and \
+      set_points['right_shoulder'][2] <= set_points['right_shoulder'][3]
+
+    valid = len(set_points['triangles']) == nb_sets - 2
+    for s in set_points['triangles']:
+      valid = s[0] <= s[1] and s[1] <= s[2] 
+  return valid

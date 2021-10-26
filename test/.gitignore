@@ -1,0 +1,11 @@
+# vscode
+.vscode
+
+# venv
+
+Include/
+Lib/
+Scripts/
+share/
+src/
+pyvenv.cfg

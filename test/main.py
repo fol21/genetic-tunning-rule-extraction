@@ -1,15 +1,16 @@
-
-
-
+import random
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 
 from skfuzzy import control as ctrl
-from src.fuzzy_rules.fuzzy_rules import read_dataset
-from src.util.utils import evaluate_from_hyperparams
+from src.rule_extraction.fuzzy_rules import read_dataset
+from src.rule_extraction.utils import evaluate_from_hyperparams
 
-file_path = './2020877-serie.txt'
+from sklearn.model_selection import train_test_split
+
+
+file_path = './test/2020877-serie.txt'
 data = read_dataset(file_path)
 
 
@@ -20,14 +21,28 @@ hyperparams = h = {
   'aggregation_opt': {'and_func':np.fmin,'or_func': np.fmax} 
 }
 
-hyperparams = h = {
-  'window_size': 6,
-  'steps_forward': 1,
-  'nb_sets': 4,
-  'aggregation_opt': {'and_func':np.fmin,'or_func': np.fmax} 
-}
+not_done = True
+while (not_done):
+  try:
+    set_points = {
+      'left_shoulder': None,
+      'right_shoulder': None,
+      'triangles': []
+    }
+    for _ in range(h['nb_sets']):
+      min_val = 0.8 * data.min()
+      max_val = 1.2 * data.max()
+      d = ( max_val - min_val ) / 3
+      step1 = min_val + d
+      step2 = min_val + (2 * d)
+      s = [random.triangular(min_val, step1), random.triangular(step1, step2), random.triangular(step2, max_val)]
+      s.sort()
+      set_points['triangles'].append(s) 
 
-res = evaluate_from_hyperparams(hyperparams, data, data, True)
+    res = evaluate_from_hyperparams(hyperparams, data, data, True, {'shoulder': False, 'set_points': set_points})
+    not_done = False
+  except:
+    pass    
 
 print('-'*21 + '\nDataset Distribution\n' + '-'*21)
 print('X\t:{} | y_true\t:{}'.format(res['datasets']['X'].shape, res['datasets']['y_true'].shape))

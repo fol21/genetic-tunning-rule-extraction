@@ -8,7 +8,7 @@ from typing import Callable, Dict
 from skfuzzy import control as ctrl
 from sklearn.model_selection import train_test_split
 
-from fuzzy_rules import extract_rules, define_input_variables, define_output_variables
+from .fuzzy_rules import extract_rules, define_input_variables, define_output_variables
 
 
 
@@ -44,9 +44,34 @@ def set_rules_configurations(
     aggregation_opt: Dict[str, Callable],
     defuzzify_method='centroid',
     resolution=1000,
-    epsilon=0.0001
+    epsilon=0.0001,
+    shoulder=False
 ):
 
+  """
+    Configuration
+    -------------
+      Variable Parameters
+        - nb_inputs: Number of input variable
+        - nb_outputs: Number of output variables
+        - nb_sets: Number of fuzzy set by variable
+        - min : list of min value for each variables
+        - max : list of max value for each variables
+        - shoulder : The first and last set are trapezoidal function
+
+      Fuzzy System Parameters
+        - defuzzify_method: Controls which defuzzification method will be used. 
+            - 'centroid': Centroid of area 
+            - 'bisector': bisector of area 
+            - 'mom' : mean of maximum 
+            - 'som' : min of maximum 
+            - 'lom' : max of maximum
+        - aggregation_opt: mathematic function for OR and AND operation
+
+      Other Parameters (optional)
+        - resolution: number of points in discret domain for each I/O variable.
+        - epsilon: gap for min value (min - epsilon) and max value (max + epsilon)
+  """
   config = {
     # Variable Parameters
     'nb_inputs' : nb_inputs,
@@ -54,7 +79,7 @@ def set_rules_configurations(
     'nb_sets': [[nb_sets] * nb_inputs, [nb_sets + 1] * nb_outputs],
     'min': [x_min_value,y_min_value],
     'max': [x_max_value,y_max_value],
-    'shoulder': True,
+    'shoulder': shoulder,
 
     # Fuzzy System Parameters
     'defuzzify_method': defuzzify_method,
@@ -66,15 +91,15 @@ def set_rules_configurations(
   }
   return config
 
-def generate_sets(config):
+def generate_sets(config, set_points=None):
   """
   Use set_rules_configuration() helper function for setting up the config input in the 
   correct format from the user defined hyperparameters.
   
   See: set_rules_configuration()
   """
-  antecedents = define_input_variables(config, shoulder=config['shoulder'])
-  consequents = define_output_variables(config, shoulder=config['shoulder'], defuzzify_method=config['defuzzify_method'])
+  antecedents = define_input_variables(config, config['shoulder'], set_points)
+  consequents = define_output_variables(config, config['shoulder'], config['defuzzify_method'], set_points)
 
   return antecedents, consequents
 
@@ -126,6 +151,12 @@ def evaluate_from_hyperparams(
       'defuzzify_method': str,
       'resolution': int,
       'epsilon': float
+      'shoulder': bool
+      'set_points': {
+        left_shoulder: list[abcd]
+        right_shoulder: list[abcd]
+        triangles: list[][abc]
+      }
     }
 
     Returns
@@ -143,9 +174,19 @@ def evaluate_from_hyperparams(
   h = hyperparams
   h['datasets'] = {'X': None, 'y_true': None, 'X_train': None,' X_test': None, 'y_train': None, 'y_test': None }
 
-  options = options \
-    if options != None \
-    else {'test_size': 0.20, 'defuzzify_method': 'centroid','resolution': 1000,'epsilon': 0.0001}
+  _default_opts = {
+    'test_size': 0.20,
+    'defuzzify_method': 'centroid',
+    'resolution': 1000,
+    'epsilon': 0.0001,
+    'shoulder': False,
+    'set_points': None
+  }
+  options = {
+      **_default_opts,
+      **options
+    } \
+    if options != None else _default_opts 
 
 
   # Creating 80/20 train and test dataset
@@ -178,10 +219,12 @@ def evaluate_from_hyperparams(
       aggregation_opt,
       options['defuzzify_method'],
       options['resolution'],
-      options['epsilon']
+      options['epsilon'],
+      options['shoulder'],
   )
   # Sets
-  antecedents, consequents = generate_sets(config)
+  antecedents, consequents = generate_sets(config, options['set_points'])
+  antecedents[0].view()
   # Rules extraction
   rules, df_rules = extract_rules(config, antecedents, consequents, h['datasets']['X_train'], h['datasets']['y_train'])
   # Control System
