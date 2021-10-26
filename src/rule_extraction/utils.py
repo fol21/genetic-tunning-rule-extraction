@@ -224,7 +224,6 @@ def evaluate_from_hyperparams(
   )
   # Sets
   antecedents, consequents = generate_sets(config, options['set_points'])
-  antecedents[0].view()
   # Rules extraction
   rules, df_rules = extract_rules(config, antecedents, consequents, h['datasets']['X_train'], h['datasets']['y_train'])
   # Control System
