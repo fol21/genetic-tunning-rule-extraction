@@ -9,8 +9,6 @@ from .fuzzy_rules import extract_rules, define_input_variables, define_output_va
 
 FLOAT_LIST = List[float]
 
-
-
 def generate_train_set_dataset(test_size, input_series, window_size, output_series, steps_forward):
   
   # Input
