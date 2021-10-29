@@ -1,11 +1,9 @@
 from operator import itemgetter
 from itertools import groupby
-import os
+from skfuzzy import control as ctrl
+
 import numpy as np
 import skfuzzy as fuzz
-from skfuzzy import control as ctrl
-from functools import reduce
-import pandas as pd
 
 def read_dataset(file_path):
     def preprocessing(line):
@@ -148,30 +146,29 @@ def extract_rules(config, input_variables , output_variables, X, y):
     cons = var[terms[con]]
     rules.append(ctrl.Rule(antc, cons, **config['aggregation_opt']))
     rules_view.append((antc, cons, dr_val))
-  return rules, rules_dataframe(rules_view)
+  return rules
 
-def rules_dataframe(rules_view):
-  df=pd.DataFrame()
-  for rule in rules_view:
-      dr_val = rule[2]
-      con = rule[1]
-      t1=rule[0]
-      ts=[]
-      while True:
-          try:
-              t2=t1.term2
-              ts.append(t2)
-              t1=t1.term1        
-          except:
-              ts.append(t1)
-              break
-      order_columns = ['I_{}'.format(i+1) for i,a in enumerate(ts[::-1])] + ['O_1', 'Dr']
-      rule_dict = {'I_{}'.format(i+1):a.label for i,a in enumerate(ts[::-1])}
-      rule_dict['O_1']= con.label
-      rule_dict['Dr']= dr_val
-      df=df.append(rule_dict, ignore_index=True)
-      df = df[order_columns]
-  return df
+# def rules_dataframe(rules_view):
+#   for rule in rules_view:
+#       dr_val = rule[2]
+#       con = rule[1]
+#       t1=rule[0]
+#       ts=[]
+#       while True:
+#           try:
+#               t2=t1.term2
+#               ts.append(t2)
+#               t1=t1.term1        
+#           except:
+#               ts.append(t1)
+#               break
+#       order_columns = ['I_{}'.format(i+1) for i,a in enumerate(ts[::-1])] + ['O_1', 'Dr']
+#       rule_dict = {'I_{}'.format(i+1):a.label for i,a in enumerate(ts[::-1])}
+#       rule_dict['O_1']= con.label
+#       rule_dict['Dr']= dr_val
+#       df=df.append(rule_dict, ignore_index=True)
+#       df = df[order_columns]
+#   return df
 
 def _validate_points(set_points, nb_sets):
   """

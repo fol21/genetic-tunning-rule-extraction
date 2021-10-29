@@ -1,7 +1,6 @@
 import random
-import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from skfuzzy import control as ctrl
 from src.rule_extraction.fuzzy_rules import read_dataset
@@ -40,8 +39,9 @@ while (not_done):
       set_points['triangles'].append(s) 
 
     res = evaluate_from_hyperparams(hyperparams, data, data, True, {'shoulder': False, 'set_points': set_points})
+    next(res['sim'].ctrl.antecedents).view()
     not_done = False
-  except:
+  except Exception as e:
     pass    
 
 print('-'*21 + '\nDataset Distribution\n' + '-'*21)
@@ -51,7 +51,7 @@ print('X_test\t:{}  | y_test\t:{}'.format(res['datasets']['X_test'].shape, res['
 
 print('\nmean_squared_error: {}'.format(res['out'][0]))
 
-plt.figure(figsize=(15,5))
-plt.plot(res['datasets']['y_true'], '*')
-plt.plot(res['out'][1], 's')
-plt.show()
+# plt.figure(figsize=(15,5))
+# plt.plot(res['datasets']['y_true'], '*')
+# plt.plot(res['out'][1], 's')
+# plt.show()

@@ -1,28 +1,29 @@
-import numpy as np
-import pandas as pd
-import numpy as np
-import tensorflow as tf
+from typing import Callable, Dict, List
 
+import numpy as np
 from sklearn.metrics import mean_squared_error
-from typing import Callable, Dict
 from skfuzzy import control as ctrl
 from sklearn.model_selection import train_test_split
 
-from fuzzy_rules import extract_rules, define_input_variables, define_output_variables
+from .fuzzy_rules import extract_rules, define_input_variables, define_output_variables
+
+FLOAT_LIST = List[float]
 
 
 
 def generate_train_set_dataset(test_size, input_series, window_size, output_series, steps_forward):
   
   # Input
-  idataset = tf.data.Dataset.from_tensor_slices(input_series)
-  idataset = idataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
-  idataset = np.stack([list(window_dataset) for window_dataset in idataset], axis=0)
+  # idataset = tf.data.Dataset.from_tensor_slices(input_series)
+  # idataset = idataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
+  idataset = _window_sets(input_series, window_size + steps_forward, shift=1, drop_remainder=True)
+  idataset = np.stack(idataset, axis=0)
 
   # Output
-  odataset = tf.data.Dataset.from_tensor_slices(output_series)
-  odataset = odataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
-  odataset = np.stack([list(window_dataset) for window_dataset in odataset], axis=0)
+  # odataset = tf.data.Dataset.from_tensor_slices(output_series)
+  # odataset = odataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
+  odataset = _window_sets(output_series, window_size + steps_forward, shift=1, drop_remainder=True)
+  odataset = np.stack([window_dataset for window_dataset in odataset], axis=0)
 
   X, y_true = idataset[:,:-steps_forward,0], odataset[:,-steps_forward:][:,-1,:]
   X_train, X_test, y_train, y_test = train_test_split(X, y_true, test_size=test_size, shuffle=False)
@@ -105,7 +106,7 @@ def generate_sets(config, set_points=None):
 
 
 
-def evaluate_model(sim, x_data, y_data, return_results=False):
+def evaluate_model(sim, x_data, y_data):
   y_prev = []
   for x in x_data:
       for i, x_i in enumerate(x,1):
@@ -117,14 +118,12 @@ def evaluate_model(sim, x_data, y_data, return_results=False):
   mse = mean_squared_error(y_data, y_prev)
 
   y_data, y_prev = np.squeeze(np.array(y_data)), np.array(y_prev)
-  table_results = pd.DataFrame()
-  table_results['Real']=y_data
-  table_results['Predicted'] = y_prev
-  table_results['Diference'] = np.abs(y_data - y_prev) 
-  table_results['Diference (%)'] = np.abs((y_data - y_prev) / y_data)
+  # table_results = pd.DataFrame()
+  # table_results['Real']=y_data
+  # table_results['Predicted'] = y_prev
+  # table_results['Diference'] = np.abs(y_data - y_prev) 
+  # table_results['Diference (%)'] = np.abs((y_data - y_prev) / y_data)
 
-  if return_results:
-    return mse, y_prev, table_results
   return mse, y_prev,
 
 
@@ -225,12 +224,12 @@ def evaluate_from_hyperparams(
   # Sets
   antecedents, consequents = generate_sets(config, options['set_points'])
   # Rules extraction
-  rules, df_rules = extract_rules(config, antecedents, consequents, h['datasets']['X_train'], h['datasets']['y_train'])
+  rules = extract_rules(config, antecedents, consequents, h['datasets']['X_train'], h['datasets']['y_train'])
   # Control System
   system = ctrl.ControlSystem(rules)
   sim = ctrl.ControlSystemSimulation(system)
   # Evaluation
-  mse, y_prev, table_results = evaluate_model(sim, h['datasets']['X'], h['datasets']['y_true'], return_results=True)
+  mse, y_prev = evaluate_model(sim, h['datasets']['X'], h['datasets']['y_true'])
 
   return {
     'sim': sim,
@@ -238,5 +237,14 @@ def evaluate_from_hyperparams(
     'nb_sets': h['nb_sets'],
     'aggregation_opt': h['aggregation_opt'],
     'datasets': h['datasets'] if out_datasets else None,
-    'out': (mse, y_prev, table_results)
+    'out': (mse, y_prev)
   }
+
+def _window_sets(series: FLOAT_LIST, size: int, shift: int, drop_remainder=False):
+  windows = []
+  for i in range(0, len(series), shift):
+    if (i + size - 1) < len(series):
+      windows.append(series[i: i + size])
+    if (not drop_remainder and i >= len(series) - size + 1):
+      windows.append(series[i::])
+  return windows
