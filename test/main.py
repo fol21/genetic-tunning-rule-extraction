@@ -17,7 +17,8 @@ hyperparams = h = {
   'window_size': 6,
   'steps_forward': 1,
   'nb_sets': 4,
-  'aggregation_opt': {'and_func':np.fmin,'or_func': np.fmax} 
+  'aggregation_opt': {'and_func':np.fmin,'or_func': np.fmax},
+  'defuzzify_method': 'mom'
 }
 
 not_done = True
@@ -50,6 +51,7 @@ print('X_train\t:{} | y_train\t:{}'.format(res['datasets']['X_train'].shape, res
 print('X_test\t:{}  | y_test\t:{}'.format(res['datasets']['X_test'].shape, res['datasets']['y_test'].shape))
 
 print('\nmean_squared_error: {}'.format(res['out'][0]))
+print('defuzzify method:', res['defuzzify_method'])
 
 # plt.figure(figsize=(15,5))
 # plt.plot(res['datasets']['y_true'], '*')

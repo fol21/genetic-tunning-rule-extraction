@@ -140,7 +140,8 @@ def evaluate_from_hyperparams(
       'window_size': int,
       'steps_forward': int,
       'nb_sets': int,
-      'aggregation_opt': {'and_func': Callable,'or_func': Callable} 
+      'aggregation_opt': {'and_func': Callable,'or_func': Callable},
+      'defuzzify_method': string
     }
 
     options: {
@@ -203,6 +204,7 @@ def evaluate_from_hyperparams(
   nb_outputs = h['steps_forward']
   nb_sets = h['nb_sets']
   aggregation_opt= h['aggregation_opt']
+  defuzzify_method  = h['defuzzify_method']
   
   # Configuration
   config = set_rules_configurations(
@@ -214,7 +216,7 @@ def evaluate_from_hyperparams(
       y_min_value, 
       y_max_value, 
       aggregation_opt,
-      options['defuzzify_method'],
+      defuzzify_method,
       options['resolution'],
       options['epsilon'],
       options['shoulder'],
@@ -234,6 +236,7 @@ def evaluate_from_hyperparams(
     'window_size': h['window_size'],
     'nb_sets': h['nb_sets'],
     'aggregation_opt': h['aggregation_opt'],
+    'defuzzify_method': h['defuzzify_method'],
     'datasets': h['datasets'] if out_datasets else None,
     'out': (mse, y_prev)
   }
