@@ -1,10 +1,10 @@
 import random
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 from skfuzzy import control as ctrl
 from src.rule_extraction.fuzzy_rules import read_dataset
-from src.rule_extraction.utils import evaluate_from_hyperparams
+from src.rule_extraction.utils import evaluate_from_hyperparams, TriangleFactory
 
 from sklearn.model_selection import train_test_split
 
@@ -29,16 +29,14 @@ while (not_done):
       'right_shoulder': None,
       'triangles': []
     }
-    for _ in range(h['nb_sets']):
-      min_val = 0.8 * data.min()
-      max_val = 1.2 * data.max()
-      d = ( max_val - min_val ) / 3
-      step1 = min_val + d
-      step2 = min_val + (2 * d)
-      s = [random.triangular(min_val, step1), random.triangular(step1, step2), random.triangular(step2, max_val)]
-      s.sort()
-      set_points['triangles'].append(s) 
-
+    min_val = data.min()
+    max_val = data.max()
+    if random.random() >= .5:
+      s = [TriangleFactory.random_in_range(min_val, max_val) for _ in range(h['nb_sets'])]
+      set_points['triangles'] = s
+    else:
+      s = TriangleFactory.random_in_intervals(min_val, max_val, h['nb_sets'])
+      set_points['triangles'] = s
     res = evaluate_from_hyperparams(hyperparams, data, data, True, {'shoulder': False, 'set_points': set_points})
     next(res['sim'].ctrl.antecedents).view()
     not_done = False
@@ -53,7 +51,7 @@ print('X_test\t:{}  | y_test\t:{}'.format(res['datasets']['X_test'].shape, res['
 print('\nmean_squared_error: {}'.format(res['out'][0]))
 print('defuzzify method:', res['defuzzify_method'])
 
-# plt.figure(figsize=(15,5))
-# plt.plot(res['datasets']['y_true'], '*')
-# plt.plot(res['out'][1], 's')
-# plt.show()
+plt.figure(figsize=(15,5))
+plt.plot(res['datasets']['y_true'], '*')
+plt.plot(res['out'][1], 's')
+plt.show()

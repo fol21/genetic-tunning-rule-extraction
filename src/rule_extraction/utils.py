@@ -1,6 +1,8 @@
-from typing import Callable, Dict, List
-
+import random
 import numpy as np
+
+
+from typing import Callable, Dict, List
 from sklearn.metrics import mean_squared_error
 from skfuzzy import control as ctrl
 from sklearn.model_selection import train_test_split
@@ -240,6 +242,62 @@ def evaluate_from_hyperparams(
     'datasets': h['datasets'] if out_datasets else None,
     'out': (mse, y_prev)
   }
+
+
+
+class TriangleFactory:
+
+  # instance attributes
+  def __init__(self):
+    pass
+
+  @staticmethod
+  def random_in_range(a: float, b: float):
+    """
+      Returns list of lenght 3 with ABC 
+      points of a Triangle, randomly chosen in specific range.
+      
+      Parameters
+      ----------
+      a: float 
+      leftmost range where triangle can be built 
+      b: float 
+      righttmost range where triangle can be built 
+    """
+    assert b >= a
+    tri = []
+    A = random.triangular(a, a + (b - a) /2)
+    B = random.triangular(A, b)
+    C = random.triangular(B, b)
+    tri.append(A)
+    tri.append(B)
+    tri.append(C)
+    return tri
+
+  @staticmethod
+  def random_in_intervals(a: float, b: float, num_intervals: int):
+    """
+      Returns a list of lists of lenght 3 with ABC 
+      points of a Triangle, randomly chosen in specific intervals.
+      Intervals are equaly distributes in range
+      
+      Parameters
+      ----------
+      a: float 
+      leftmost range where triangle can be built 
+      b: float 
+      righttmost range where triangle can be built 
+      num_intervals: int
+      number of intervals in range (a,b) 
+    """
+    tris = []
+    it = a
+    for _ in range(num_intervals):
+      d = (b - a) / num_intervals
+      tri = TriangleFactory.random_in_range(it, it + d)
+      tris.append(tri)
+      it = it + d
+    return tris
 
 def _window_sets(series: FLOAT_LIST, size: int, shift: int, drop_remainder=False):
   windows = []
