@@ -16,13 +16,13 @@ def generate_train_set_dataset(test_size, input_series, window_size, output_seri
   # Input
   # idataset = tf.data.Dataset.from_tensor_slices(input_series)
   # idataset = idataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
-  idataset = _window_sets(input_series, window_size + steps_forward, shift=1, drop_remainder=True)
+  idataset = window_sets(input_series, window_size + steps_forward, shift=1, drop_remainder=True)
   idataset = np.stack(idataset, axis=0)
 
   # Output
   # odataset = tf.data.Dataset.from_tensor_slices(output_series)
   # odataset = odataset.window(window_size + steps_forward, shift=1, drop_remainder=True)
-  odataset = _window_sets(output_series, window_size + steps_forward, shift=1, drop_remainder=True)
+  odataset = window_sets(output_series, window_size + steps_forward, shift=1, drop_remainder=True)
   odataset = np.stack([window_dataset for window_dataset in odataset], axis=0)
 
   X, y_true = idataset[:,:-steps_forward,0], odataset[:,-steps_forward:][:,-1,:]
@@ -105,15 +105,31 @@ def generate_sets(config, set_points=None):
   return antecedents, consequents
 
 
+def sim_compute(sim, x_data, throw_error=False):
+  y_prev: List(float) = []
+  if(not throw_error):
+    for x in x_data:
+      try:
+        for i, x_i in enumerate(x,1):
+            sim.input['I_{}'.format(i)] = x_i
+        sim.compute()
+        result = sim.output['O_1']
+        y_prev.append(result)
+      except:
+        y_prev.append(math.nan)
+  else:
+      for x in x_data:
+        for i, x_i in enumerate(x,1):
+            sim.input['I_{}'.format(i)] = x_i
+        sim.compute()
+        result = sim.output['O_1']
+        y_prev.append(result)
+  return y_prev
+
 
 def evaluate_model(sim, x_data, y_data):
   y_prev = []
-  for x in x_data:
-      for i, x_i in enumerate(x,1):
-          sim.input['I_{}'.format(i)] = x_i
-      sim.compute()
-      result = sim.output['O_1']
-      y_prev.append(result)
+  y_prev = sim_compute(sim, x_data, True)
       
   mse = mean_squared_error(y_data, y_prev)
 
@@ -299,7 +315,7 @@ class TriangleFactory:
       it = it + d
     return tris
 
-def _window_sets(series: FLOAT_LIST, size: int, shift: int, drop_remainder=False):
+def window_sets(series: FLOAT_LIST, size: int, shift: int, drop_remainder=False):
   windows = []
   for i in range(0, len(series), shift):
     if (i + size - 1) < len(series):

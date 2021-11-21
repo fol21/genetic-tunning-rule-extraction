@@ -14,7 +14,7 @@ data = read_dataset(file_path)
 
 
 hyperparams = h = {
-  'window_size': 6,
+  'window_size': 4,
   'steps_forward': 1,
   'nb_sets': 4,
   'aggregation_opt': {'and_func':np.fmin,'or_func': np.fmax},
@@ -35,7 +35,7 @@ while (not_done):
       s = [TriangleFactory.random_in_range(min_val, max_val) for _ in range(h['nb_sets'])]
       set_points['triangles'] = s
     else:
-      s = TriangleFactory.random_in_intervals(min_val, max_val, h['nb_sets'])
+      s = TriangleFactory.random_in_intervals(min_val, max_val, h['nb_sets'], only_top=True)
       set_points['triangles'] = s
     res = evaluate_from_hyperparams(hyperparams, data, data, True, {'shoulder': False, 'set_points': set_points})
     next(res['sim'].ctrl.antecedents).view()
